@@ -183,4 +183,77 @@ export interface ModelStat {
   totalLocAdded: number;
 }
 
-export type PageId = 'overview' | 'users' | 'features' | 'languages' | 'models' | 'essp' | 'trend';
+export type PageId = 'overview' | 'users' | 'features' | 'languages' | 'models' | 'essp' | 'trend' | 'teams';
+
+// ============================================================
+// User-Teams Report Types (user-teams-1-day API)
+// ============================================================
+
+export interface UserTeamRecord {
+  user_id: number;
+  user_login: string;
+  day: string;
+  organization_id?: string;
+  enterprise_id?: string;
+  team_id: number;
+  slug: string;
+}
+
+// ============================================================
+// Team-level aggregated types
+// ============================================================
+
+export interface TeamSummary {
+  teamId: number;
+  slug: string;
+  activeUsers: number;
+  totalInteractions: number;
+  totalCodeGenerations: number;
+  totalCodeAcceptances: number;
+  acceptanceRate: number;
+  totalLocSuggested: number;
+  totalLocAdded: number;
+  totalLocDeleted: number;
+  agentUsers: number;
+  chatUsers: number;
+  agentAdoptionRate: number;
+  chatAdoptionRate: number;
+  members: string[];
+}
+
+export interface TeamDailyTotal {
+  date: string;
+  teamId: number;
+  slug: string;
+  activeUsers: number;
+  totalInteractions: number;
+  totalCodeGenerations: number;
+  totalCodeAcceptances: number;
+  acceptanceRate: number;
+  totalLocAdded: number;
+}
+
+export interface TeamFeatureBreakdown {
+  feature: string;
+  userCount: number;
+  totalInteractions: number;
+  totalCodeGenerations: number;
+  totalCodeAcceptances: number;
+  totalLocAdded: number;
+}
+
+export interface TeamLanguageStat {
+  language: string;
+  totalCodeGenerations: number;
+  totalCodeAcceptances: number;
+  acceptanceRate: number;
+  totalLocAdded: number;
+}
+
+export interface TeamProcessedData {
+  teamSummaries: TeamSummary[];
+  teamDailyTotals: TeamDailyTotal[];
+  allTeams: { teamId: number; slug: string }[];
+  totalTeams: number;
+  avgTeamSize: number;
+}

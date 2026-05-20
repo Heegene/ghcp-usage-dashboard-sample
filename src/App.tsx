@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GithubLogo, ChartLineUp, X, House, UsersThree, Puzzle, Code, Brain, Lightbulb, TrendUp, Globe } from '@phosphor-icons/react';
+import { GithubLogo, ChartLineUp, X, House, UsersThree, PuzzlePiece, Code, Brain, Lightbulb, TrendUp, Globe, Users } from '@phosphor-icons/react';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -14,14 +14,16 @@ import { LanguagesPage } from '@/components/dashboard/LanguagesPage';
 import { ModelsPage } from '@/components/dashboard/ModelsPage';
 import { EsspPage } from '@/components/dashboard/EsspPage';
 import { TrendPage } from '@/components/dashboard/TrendPage';
-import { parseUserNDJSON, processData } from '@/lib/metrics';
-import { useI18n } from '@/lib/i18n';
-import type { ProcessedData, PageId, UserDayRecord } from '@/lib/types';
+import { TeamsPage } from '@/components/dashboard/TeamsPage';
+import { parseUserNDJSON, parseUserTeamsNDJSON, processData, processTeamData } from '@/lib/metrics';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
+import type { ProcessedData, PageId, UserDayRecord, UserTeamRecord, TeamProcessedData } from '@/lib/types';
 
-const NAV_ITEMS: { id: PageId; icon: typeof House; labelKey: string }[] = [
+const NAV_ITEMS: { id: PageId; icon: typeof House; labelKey: TranslationKey }[] = [
   { id: 'overview', icon: House, labelKey: 'nav.overview' },
   { id: 'users', icon: UsersThree, labelKey: 'nav.users' },
-  { id: 'features', icon: Puzzle, labelKey: 'nav.features' },
+  { id: 'teams', icon: Users, labelKey: 'nav.teams' },
+  { id: 'features', icon: PuzzlePiece, labelKey: 'nav.features' },
   { id: 'languages', icon: Code, labelKey: 'nav.languages' },
   { id: 'models', icon: Brain, labelKey: 'nav.models' },
   { id: 'essp', icon: Lightbulb, labelKey: 'nav.essp' },
@@ -31,6 +33,7 @@ const NAV_ITEMS: { id: PageId; icon: typeof House; labelKey: string }[] = [
 function App() {
   const { t, lang, setLang } = useI18n();
   const [rawRecords, setRawRecords] = useState<UserDayRecord[] | null>(null);
+  const [rawTeamRecords, setRawTeamRecords] = useState<UserTeamRecord[] | null>(null);
   const [page, setPage] = useState<PageId>('overview');
   const [licenseCount, setLicenseCount] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState('');
@@ -49,18 +52,33 @@ function App() {
     return processData(filteredRecords);
   }, [filteredRecords]);
 
-  const handleFileLoad = useCallback((content: string) => {
+  const teamData = useMemo<TeamProcessedData | null>(() => {
+    if (!filteredRecords || filteredRecords.length === 0 || !rawTeamRecords || rawTeamRecords.length === 0) return null;
+    return processTeamData(filteredRecords, rawTeamRecords);
+  }, [filteredRecords, rawTeamRecords]);
+
+  const handleFileLoad = useCallback((content: string, fileType: 'user' | 'team') => {
     try {
-      const parsed = parseUserNDJSON(content);
-      if (parsed.length === 0) {
-        toast.error(t('upload.no_data'));
-        return;
+      if (fileType === 'team') {
+        const parsed = parseUserTeamsNDJSON(content);
+        if (parsed.length === 0) {
+          toast.error(t('upload.no_data'));
+          return;
+        }
+        setRawTeamRecords(parsed);
+        toast.success(t('upload.team_loaded'));
+      } else {
+        const parsed = parseUserNDJSON(content);
+        if (parsed.length === 0) {
+          toast.error(t('upload.no_data'));
+          return;
+        }
+        setRawRecords(parsed);
+        const dates = [...new Set(parsed.map(r => r.day))].sort();
+        setDateFrom(dates[0] || '');
+        setDateTo(dates[dates.length - 1] || '');
+        toast.success(t('upload.success'));
       }
-      setRawRecords(parsed);
-      const dates = [...new Set(parsed.map(r => r.day))].sort();
-      setDateFrom(dates[0] || '');
-      setDateTo(dates[dates.length - 1] || '');
-      toast.success(t('upload.success'));
     } catch {
       toast.error(t('upload.error'));
     }
@@ -68,6 +86,7 @@ function App() {
 
   const handleClear = useCallback(() => {
     setRawRecords(null);
+    setRawTeamRecords(null);
     setDateFrom('');
     setDateTo('');
     setPage('overview');
@@ -79,6 +98,16 @@ function App() {
     switch (page) {
       case 'overview': return <OverviewPage data={data} />;
       case 'users': return <UsersPage data={data} />;
+      case 'teams': return teamData
+        ? <TeamsPage teamData={teamData} />
+        : <div className="max-w-2xl mx-auto py-12 space-y-6">
+            <div className="flex flex-col items-center text-center text-muted-foreground">
+              <Users className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-lg font-medium text-foreground">{t('teams.no_data')}</p>
+              <p className="text-sm mt-1">{t('teams.upload_hint')}</p>
+            </div>
+            <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
+          </div>;
       case 'features': return <FeaturesPage data={data} />;
       case 'languages': return <LanguagesPage data={data} />;
       case 'models': return <ModelsPage data={data} />;
@@ -148,7 +177,7 @@ function App() {
               <h2 className="text-3xl font-bold text-foreground mb-3">{t('upload.title')}</h2>
               <p className="text-muted-foreground text-lg">{t('upload.desc')}</p>
             </div>
-            <FileUpload onFileLoad={handleFileLoad} />
+            <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
             <div className="mt-8 p-4 rounded-lg bg-card/50 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-2">{t('upload.how')}</h3>
               <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
@@ -185,7 +214,7 @@ function App() {
                         }`}
                       >
                         <Icon className="w-4 h-4 shrink-0" weight={active ? 'fill' : 'regular'} />
-                        {t(item.labelKey as any)}
+                        {t(item.labelKey)}
                       </button>
                     );
                   })}

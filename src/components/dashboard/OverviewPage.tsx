@@ -47,7 +47,7 @@ export function OverviewPage({ data }: OverviewPageProps) {
         <StatCard title={t('overview.total_users')} value={formatNumber(s.totalUsers)} subtitle={`${s.totalDays} ${t('app.days_of_data')}`} trend="up" delay={0} />
         <StatCard title={t('overview.total_interactions')} value={formatNumber(s.totalInteractions)} subtitle={`${formatNumber(s.avgInteractionsPerUser)} ${t('overview.avg_interactions')}`} trend="up" delay={0.1} />
         <StatCard title={t('overview.code_generations')} value={formatNumber(s.totalCodeGenerations)} subtitle={`${formatNumber(s.avgCodeGenPerUser)} ${t('overview.avg_codegen')}`} trend="up" delay={0.2} />
-        <StatCard title={t('overview.acceptance_rate')} value={formatPercent(s.acceptanceRate)} subtitle={`${formatNumber(s.totalCodeAcceptances)} ${t('overview.code_generations')}`} trend={s.acceptanceRate > 20 ? 'up' : 'neutral'} delay={0.3} />
+        <StatCard title={t('overview.acceptance_rate')} value={formatPercent(s.acceptanceRate)} subtitle={`${formatNumber(s.totalCodeAcceptances)} / ${formatNumber(s.totalCodeGenerations)}`} trend={s.acceptanceRate > 20 ? 'up' : 'neutral'} delay={0.3} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

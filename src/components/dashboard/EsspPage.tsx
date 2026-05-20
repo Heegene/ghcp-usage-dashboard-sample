@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { formatNumber, formatPercent } from '@/lib/metrics';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type TranslationKey } from '@/lib/i18n';
 import type { ProcessedData } from '@/lib/types';
 
 interface EsspPageProps {
@@ -15,11 +15,11 @@ interface EsspPageProps {
 
 interface EsspMetric {
   zone: string;
-  zoneKey: string;
-  nameKey: string;
+  zoneKey: 'business' | 'velocity' | 'quality' | 'happiness';
+  nameKey: TranslationKey;
   value: string;
-  descKey: string;
-  rationaleKey: string;
+  descKey: TranslationKey;
+  rationaleKey: TranslationKey;
   formula: string;
 }
 
@@ -130,7 +130,7 @@ export function EsspPage({ data, licenseCount, onLicenseChange }: EsspPageProps)
     },
   ];
 
-  const zoneColors: Record<string, string> = {
+  const zoneColors: Record<EsspMetric['zoneKey'], string> = {
     business: 'bg-chart-1/20 text-chart-1 border-chart-1/30',
     velocity: 'bg-chart-2/20 text-chart-2 border-chart-2/30',
     quality: 'bg-chart-3/20 text-chart-3 border-chart-3/30',
@@ -186,14 +186,14 @@ export function EsspPage({ data, licenseCount, onLicenseChange }: EsspPageProps)
                   <Badge className={`shrink-0 ${zoneColors[m.zoneKey] || ''}`}>{m.zone}</Badge>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-4">
-                      <h3 className="font-medium text-foreground">{t(m.nameKey as any)}</h3>
+                      <h3 className="font-medium text-foreground">{t(m.nameKey)}</h3>
                       <span className="text-2xl font-mono font-bold text-primary shrink-0">{m.value}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{t(m.descKey as any)}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{t(m.descKey)}</p>
                     <div className="mt-2 p-2 rounded bg-muted/30 border border-border/30">
                       <p className="text-xs font-mono text-muted-foreground">📐 {m.formula}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1 italic">{t(m.rationaleKey as any)}</p>
+                    <p className="text-xs text-muted-foreground mt-1 italic">{t(m.rationaleKey)}</p>
                   </div>
                 </div>
               </CardContent>

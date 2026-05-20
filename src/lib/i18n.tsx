@@ -140,9 +140,44 @@ const translations = {
   'filter.all': { ko: '전체', en: 'All' },
   'filter.from': { ko: '시작일', en: 'From' },
   'filter.to': { ko: '종료일', en: 'To' },
+
+  // Teams
+  'nav.teams': { ko: '팀별 분석', en: 'Team Analysis' },
+  'teams.title': { ko: '팀별 분석', en: 'Team Analysis' },
+  'teams.subtitle': { ko: 'user-teams 리포트와 per-user 메트릭을 조인하여 팀 단위 Copilot 사용량을 분석합니다.', en: 'Team-level Copilot usage by joining user-teams report with per-user metrics.' },
+  'teams.no_data': { ko: 'user-teams NDJSON 파일을 추가로 업로드해주세요.', en: 'Please upload a user-teams NDJSON file.' },
+  'teams.total_teams': { ko: '전체 팀', en: 'Total Teams' },
+  'teams.avg_team_size': { ko: '평균 팀 크기', en: 'Avg Team Size' },
+  'teams.most_active': { ko: '가장 활발한 팀', en: 'Most Active Team' },
+  'teams.overview': { ko: '팀 개요', en: 'Team Overview' },
+  'teams.comparison': { ko: '팀 비교', en: 'Team Comparison' },
+  'teams.detail': { ko: '팀 상세', en: 'Team Detail' },
+  'teams.select_team': { ko: '팀 선택', en: 'Select Team' },
+  'teams.all_teams': { ko: '전체 팀', en: 'All Teams' },
+  'teams.active_users': { ko: '활성 유저', en: 'Active Users' },
+  'teams.interactions': { ko: '인터랙션', en: 'Interactions' },
+  'teams.code_gen': { ko: '코드 생성', en: 'Code Gen' },
+  'teams.acceptance_rate': { ko: '수락률', en: 'Acceptance Rate' },
+  'teams.loc_added': { ko: 'LOC 추가', en: 'LOC Added' },
+  'teams.agent_adoption': { ko: 'Agent 채택률', en: 'Agent Adoption' },
+  'teams.chat_adoption': { ko: 'Chat 채택률', en: 'Chat Adoption' },
+  'teams.members': { ko: '멤버', en: 'Members' },
+  'teams.daily_trend': { ko: '일별 추이', en: 'Daily Trend' },
+  'teams.caveat_min_users': { ko: '⚠️ 5명 미만 팀은 user-teams 리포트에서 제외됩니다.', en: '⚠️ Teams with fewer than 5 Copilot-seated users are excluded from the report.' },
+  'teams.caveat_multi_team': { ko: '⚠️ 복수 팀 소속 유저의 활동은 각 팀에 중복 집계됩니다.', en: '⚠️ Users on multiple teams have their activity counted in each team.' },
+  'teams.metric_select': { ko: '메트릭 선택', en: 'Select Metric' },
+  'teams.upload_hint': { ko: 'user-teams 파일을 함께 업로드하면 팀별 분석이 활성화됩니다.', en: 'Upload a user-teams file alongside per-user data to enable team analysis.' },
+
+  // Upload extended
+  'upload.file_detected_user': { ko: '✅ Per-User 메트릭 파일 감지됨', en: '✅ Per-user metrics file detected' },
+  'upload.file_detected_team': { ko: '✅ User-Teams 파일 감지됨', en: '✅ User-teams file detected' },
+  'upload.file_unknown': { ko: '❌ 인식할 수 없는 파일 형식입니다.', en: '❌ Unrecognized file format.' },
+  'upload.drop_multi': { ko: 'Per-User 메트릭 및/또는 User-Teams NDJSON 파일을 드래그하여 업로드', en: 'Drag & drop per-user metrics and/or user-teams NDJSON files' },
+  'upload.team_loaded': { ko: 'User-Teams 데이터 로드 성공!', en: 'User-teams data loaded!' },
+  'upload.step_api': { ko: 'Copilot Metrics API (apiVersion=2026-03-10)에서 NDJSON 다운로드', en: 'Download NDJSON from Copilot Metrics API (apiVersion=2026-03-10)' },
 } as const;
 
-type TranslationKey = keyof typeof translations;
+export type TranslationKey = keyof typeof translations;
 
 interface I18nContextType {
   lang: Lang;

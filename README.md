@@ -75,6 +75,21 @@ npm install
 npm run dev
 ```
 
+## GitHub Pages 배포 설정
+
+이 저장소는 Vite 정적 빌드를 GitHub Pages에 배포하도록 `.github/workflows/deploy.yml` 워크플로우를 사용합니다.
+
+1. GitHub 저장소에서 **Settings → Pages**로 이동합니다.
+2. **Build and deployment → Source**를 **GitHub Actions**로 선택합니다.
+3. `main` 브랜치에 변경 사항을 push합니다.
+4. Actions의 **Deploy to GitHub Pages** 워크플로우가 완료되면 다음 주소에서 확인합니다:
+
+```text
+https://heegene.github.io/ghcp-usage-dashboard-sample/
+```
+
+다른 저장소 이름으로 fork하거나 옮기는 경우, `vite.config.ts`의 `base` 값을 `/<repository-name>/` 형식으로 변경해야 합니다. 커스텀 도메인을 사용하는 경우에는 `base: '/'`로 설정하세요.
+
 ## 라이선스
 
 MIT
@@ -157,6 +172,21 @@ src/
 npm install
 npm run dev
 ```
+
+## GitHub Pages Deployment
+
+This repository uses the `.github/workflows/deploy.yml` workflow to deploy the Vite static build to GitHub Pages.
+
+1. Go to **Settings → Pages** in the GitHub repository.
+2. Set **Build and deployment → Source** to **GitHub Actions**.
+3. Push changes to the `main` branch.
+4. After the **Deploy to GitHub Pages** workflow completes, open:
+
+```text
+https://heegene.github.io/ghcp-usage-dashboard-sample/
+```
+
+If you fork or move the project to a different repository name, update `base` in `vite.config.ts` to `/<repository-name>/`. Use `base: '/'` when deploying with a custom domain.
 
 ## License
 

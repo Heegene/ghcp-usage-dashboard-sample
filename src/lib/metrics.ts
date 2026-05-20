@@ -1,6 +1,7 @@
 import type {
   UserDayRecord, ProcessedData, DashboardSummary, UserSummary,
   DailyTotal, FeatureBreakdown, LanguageStat, IdeStat, ModelStat,
+  UserTeamRecord, TeamProcessedData, TeamSummary, TeamDailyTotal,
 } from './types';
 
 export function parseUserNDJSON(content: string): UserDayRecord[] {
@@ -301,4 +302,172 @@ export function formatPercent(num: number): string {
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ============================================================
+// Team-level metrics (user-teams-1-day API, apiVersion=2026-03-10)
+// ============================================================
+
+export function parseUserTeamsNDJSON(content: string): UserTeamRecord[] {
+  const trimmed = content.trim();
+  const records: UserTeamRecord[] = [];
+
+  const lines = trimmed.startsWith('[')
+    ? (() => { try { const arr = JSON.parse(trimmed); return Array.isArray(arr) ? arr : []; } catch { return []; } })()
+    : trimmed.split('\n').map(line => { try { return JSON.parse(line); } catch { return null; } }).filter(Boolean);
+
+  for (const obj of lines) {
+    if (obj && typeof obj === 'object' && obj.team_id !== undefined && (obj.user_id || obj.user_login)) {
+      records.push({
+        user_id: obj.user_id || 0,
+        user_login: obj.user_login || `user-${obj.user_id}`,
+        day: obj.day || '',
+        organization_id: obj.organization_id ? String(obj.organization_id) : undefined,
+        enterprise_id: obj.enterprise_id ? String(obj.enterprise_id) : undefined,
+        team_id: Number(obj.team_id),
+        slug: obj.slug || `team-${obj.team_id}`,
+      });
+    }
+  }
+  return records;
+}
+
+export function detectFileType(content: string): 'user' | 'team' | 'unknown' {
+  const trimmed = content.trim();
+  const firstLine = trimmed.startsWith('[') ? null : trimmed.split('\n')[0];
+  try {
+    const sample = firstLine ? JSON.parse(firstLine) : JSON.parse(trimmed)[0];
+    if (!sample || typeof sample !== 'object') return 'unknown';
+    if ('team_id' in sample && 'slug' in sample) return 'team';
+    if (('user_login' in sample || 'user_id' in sample) && ('code_generation_activity_count' in sample || 'totals_by_feature' in sample)) return 'user';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+export function processTeamData(
+  userRecords: UserDayRecord[],
+  teamRecords: UserTeamRecord[]
+): TeamProcessedData {
+  const userRecordKeys = (record: UserDayRecord) => {
+    const keys = [`${record.user_id}:${record.day}`];
+    if (record.enterprise_id) keys.push(`${record.user_id}:${record.day}:enterprise:${record.enterprise_id}`);
+    if (record.organization_id) keys.push(`${record.user_id}:${record.day}:organization:${record.organization_id}`);
+    return keys;
+  };
+
+  const teamRecordKey = (record: UserTeamRecord) => {
+    if (record.enterprise_id) return `${record.user_id}:${record.day}:enterprise:${record.enterprise_id}`;
+    if (record.organization_id) return `${record.user_id}:${record.day}:organization:${record.organization_id}`;
+    return `${record.user_id}:${record.day}`;
+  };
+
+  // Build lookup for the required join keys: user_id, day, and enterprise/org id.
+  const userMap = new Map<string, UserDayRecord>();
+  for (const r of userRecords) {
+    for (const key of userRecordKeys(r)) {
+      userMap.set(key, r);
+    }
+  }
+
+  // Group team records by team_id
+  const teamGroups = new Map<number, { slug: string; records: { teamRecord: UserTeamRecord; userRecord: UserDayRecord }[] }>();
+
+  for (const tr of teamRecords) {
+    const key = teamRecordKey(tr);
+    const userRecord = userMap.get(key);
+    if (!userRecord) continue; // no matching user activity
+
+    if (!teamGroups.has(tr.team_id)) {
+      teamGroups.set(tr.team_id, { slug: tr.slug, records: [] });
+    }
+    teamGroups.get(tr.team_id)!.records.push({ teamRecord: tr, userRecord });
+  }
+
+  // Build team summaries
+  const teamSummaries: TeamSummary[] = [];
+  const teamDailyTotals: TeamDailyTotal[] = [];
+
+  for (const [teamId, group] of teamGroups) {
+    const userSet = new Set<string>();
+    const agentUserSet = new Set<string>();
+    const chatUserSet = new Set<string>();
+    let totalInteractions = 0, totalCodeGen = 0, totalCodeAcc = 0;
+    let totalLocSuggested = 0, totalLocAdded = 0, totalLocDeleted = 0;
+
+    // Daily aggregation
+    const dailyMap = new Map<string, { users: Set<string>; interactions: number; codeGen: number; codeAcc: number; locAdded: number }>();
+
+    for (const { teamRecord, userRecord } of group.records) {
+      userSet.add(userRecord.user_login);
+      totalInteractions += userRecord.user_initiated_interaction_count;
+      totalCodeGen += userRecord.code_generation_activity_count;
+      totalCodeAcc += userRecord.code_acceptance_activity_count;
+      totalLocSuggested += userRecord.loc_suggested_to_add_sum;
+      totalLocAdded += userRecord.loc_added_sum;
+      totalLocDeleted += userRecord.loc_deleted_sum;
+      if (userRecord.used_agent) agentUserSet.add(userRecord.user_login);
+      if (userRecord.used_chat) chatUserSet.add(userRecord.user_login);
+
+      const day = teamRecord.day;
+      if (!dailyMap.has(day)) {
+        dailyMap.set(day, { users: new Set(), interactions: 0, codeGen: 0, codeAcc: 0, locAdded: 0 });
+      }
+      const daily = dailyMap.get(day)!;
+      daily.users.add(userRecord.user_login);
+      daily.interactions += userRecord.user_initiated_interaction_count;
+      daily.codeGen += userRecord.code_generation_activity_count;
+      daily.codeAcc += userRecord.code_acceptance_activity_count;
+      daily.locAdded += userRecord.loc_added_sum;
+    }
+
+    const activeUsers = userSet.size;
+    teamSummaries.push({
+      teamId,
+      slug: group.slug,
+      activeUsers,
+      totalInteractions,
+      totalCodeGenerations: totalCodeGen,
+      totalCodeAcceptances: totalCodeAcc,
+      acceptanceRate: totalCodeGen > 0 ? (totalCodeAcc / totalCodeGen) * 100 : 0,
+      totalLocSuggested,
+      totalLocAdded,
+      totalLocDeleted,
+      agentUsers: agentUserSet.size,
+      chatUsers: chatUserSet.size,
+      agentAdoptionRate: activeUsers > 0 ? (agentUserSet.size / activeUsers) * 100 : 0,
+      chatAdoptionRate: activeUsers > 0 ? (chatUserSet.size / activeUsers) * 100 : 0,
+      members: [...userSet].sort(),
+    });
+
+    for (const [date, daily] of dailyMap) {
+      teamDailyTotals.push({
+        date,
+        teamId,
+        slug: group.slug,
+        activeUsers: daily.users.size,
+        totalInteractions: daily.interactions,
+        totalCodeGenerations: daily.codeGen,
+        totalCodeAcceptances: daily.codeAcc,
+        acceptanceRate: daily.codeGen > 0 ? (daily.codeAcc / daily.codeGen) * 100 : 0,
+        totalLocAdded: daily.locAdded,
+      });
+    }
+  }
+
+  teamSummaries.sort((a, b) => b.totalCodeGenerations - a.totalCodeGenerations);
+  teamDailyTotals.sort((a, b) => a.date.localeCompare(b.date));
+
+  const allTeams = teamSummaries.map(t => ({ teamId: t.teamId, slug: t.slug }));
+  const totalTeams = allTeams.length;
+  const avgTeamSize = totalTeams > 0 ? teamSummaries.reduce((sum, t) => sum + t.activeUsers, 0) / totalTeams : 0;
+
+  return {
+    teamSummaries,
+    teamDailyTotals,
+    allTeams,
+    totalTeams,
+    avgTeamSize,
+  };
 }

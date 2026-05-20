@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileUpload } from '@/components/dashboard/FileUpload';
+import { ApiImport } from '@/components/dashboard/ApiImport';
 import { OverviewPage } from '@/components/dashboard/OverviewPage';
 import { UsersPage } from '@/components/dashboard/UsersPage';
 import { FeaturesPage } from '@/components/dashboard/FeaturesPage';
@@ -84,6 +86,12 @@ function App() {
     }
   }, [t]);
 
+  const handleApiReportsLoad = useCallback((userContent: string, teamContent: string) => {
+    handleFileLoad(userContent, 'user');
+    handleFileLoad(teamContent, 'team');
+    setPage('teams');
+  }, [handleFileLoad]);
+
   const handleClear = useCallback(() => {
     setRawRecords(null);
     setRawTeamRecords(null);
@@ -106,7 +114,18 @@ function App() {
               <p className="text-lg font-medium text-foreground">{t('teams.no_data')}</p>
               <p className="text-sm mt-1">{t('teams.upload_hint')}</p>
             </div>
-            <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
+            <Tabs defaultValue="upload" className="space-y-4">
+              <TabsList className="mx-auto">
+                <TabsTrigger value="upload">{t('api_import.tab_upload')}</TabsTrigger>
+                <TabsTrigger value="api">{t('api_import.tab_api')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload">
+                <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
+              </TabsContent>
+              <TabsContent value="api">
+                <ApiImport onReportsLoaded={handleApiReportsLoad} />
+              </TabsContent>
+            </Tabs>
           </div>;
       case 'features': return <FeaturesPage data={data} />;
       case 'languages': return <LanguagesPage data={data} />;
@@ -177,7 +196,18 @@ function App() {
               <h2 className="text-3xl font-bold text-foreground mb-3">{t('upload.title')}</h2>
               <p className="text-muted-foreground text-lg">{t('upload.desc')}</p>
             </div>
-            <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
+            <Tabs defaultValue="upload" className="space-y-4">
+              <TabsList className="mx-auto">
+                <TabsTrigger value="upload">{t('api_import.tab_upload')}</TabsTrigger>
+                <TabsTrigger value="api">{t('api_import.tab_api')}</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload">
+                <FileUpload onFileLoad={handleFileLoad} hasUserData={!!rawRecords} hasTeamData={!!rawTeamRecords} />
+              </TabsContent>
+              <TabsContent value="api">
+                <ApiImport onReportsLoaded={handleApiReportsLoad} />
+              </TabsContent>
+            </Tabs>
             <div className="mt-8 p-4 rounded-lg bg-card/50 border border-border/50">
               <h3 className="text-sm font-medium text-foreground mb-2">{t('upload.how')}</h3>
               <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">

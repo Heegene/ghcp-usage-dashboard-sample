@@ -11,6 +11,7 @@ GitHub [Engineering System Success Playbook (ESSP)](./2025-05-28-GitHub_ESSP_Pla
 |---|---|
 | **개요** | 전체 유저 수, 인터랙션, 코드 생성, 수락률, LOC, Agent/Chat 채택률 등 Stat Cards |
 | **유저별 활동** | 유저별 카드형 목록 — 검색, 정렬(ASC/DESC), Badge(Agent/Chat/언어) |
+| **팀별 분석** | `user-teams-1-day`와 per-user 리포트를 조인한 팀별 비교/상세 분석 |
 | **기능 채택** | code_completion, agent_mode, chat 등 기능별 유저 수/코드 생성/LOC 차트 |
 | **언어 & IDE** | 프로그래밍 언어별 + IDE별 탭 전환 차트 (바 위 숫자 표시) |
 | **모델 사용** | AI 모델별(정확한 버전명) 유저 분포 Pie + 코드 생성 Bar |
@@ -32,6 +33,37 @@ GitHub Copilot User Metrics API에서 내보낸 **NDJSON** 파일 (한 줄 = 한
 ```
 
 주요 필드: `user_login`, `day`, `user_initiated_interaction_count`, `code_generation_activity_count`, `code_acceptance_activity_count`, `loc_added_sum`, `used_agent`, `used_chat`, `totals_by_feature[]`, `totals_by_ide[]`, `totals_by_language_feature[]`, `totals_by_language_model[]`
+
+## 데이터 가져오기
+
+### 1. 파일 업로드
+
+기존처럼 per-user metrics NDJSON/JSON 파일을 업로드할 수 있습니다. 팀 단위 분석을 보려면 `user-teams-1-day` 리포트도 함께 업로드해야 합니다.
+
+### 2. 브라우저에서 API로 가져오기
+
+대시보드의 **API에서 가져오기** 탭에서 Enterprise 또는 Organization slug, 날짜 범위, GitHub token을 입력하면 다음 리포트를 자동으로 가져옵니다.
+
+- `users-1-day`
+- `user-teams-1-day`
+
+이 기능은 Copilot Metrics API `apiVersion=2026-03-10`만 사용합니다. Token은 브라우저 메모리에서만 사용되며 저장하지 않습니다. Token은 GitHub API 호출에만 전송되고, signed report URL은 token 없이 다운로드합니다.
+
+### 3. `gh` CLI helper로 가져오기
+
+브라우저에 token을 입력하고 싶지 않다면, `gh auth login` 후 아래 명령으로 리포트를 생성할 수 있습니다.
+
+```bash
+npm run fetch:reports -- --enterprise <enterprise-slug> --from 2026-05-01 --to 2026-05-07 --out reports
+```
+
+Organization 범위는 다음처럼 실행합니다.
+
+```bash
+npm run fetch:reports -- --org <org> --from 2026-05-01 --to 2026-05-07 --out reports
+```
+
+생성된 `reports/copilot-users.ndjson`와 `reports/copilot-user-teams.ndjson` 파일을 대시보드에 업로드하면 됩니다.
 
 ## 기술 스택
 
@@ -55,8 +87,10 @@ src/
 │   └── utils.ts                     # 유틸리티
 ├── components/
 │   ├── dashboard/
+│   │   ├── ApiImport.tsx            # Copilot Metrics API 가져오기
 │   │   ├── FileUpload.tsx           # 파일 업로드 (드래그앤드롭)
 │   │   ├── OverviewPage.tsx         # 개요 페이지
+│   │   ├── TeamsPage.tsx            # 팀별 분석
 │   │   ├── UsersPage.tsx            # 유저별 활동
 │   │   ├── FeaturesPage.tsx         # 기능 채택
 │   │   ├── LanguagesPage.tsx        # 언어 & IDE
@@ -109,6 +143,7 @@ Also provides Leading Indicators based on the GitHub [Engineering System Success
 |---|---|
 | **Overview** | Stat cards: total users, interactions, code generations, acceptance rate, LOC, Agent/Chat adoption |
 | **User Activity** | Per-user card list with search, sort (ASC/DESC), badges (Agent/Chat/languages) |
+| **Team Analysis** | Team comparison and detail views by joining `user-teams-1-day` with per-user reports |
 | **Feature Adoption** | Charts by feature (code_completion, agent_mode, chat, etc.) — user count, code gen, LOC |
 | **Language & IDE** | Tab-switched charts by programming language and IDE (with bar value labels) |
 | **Model Usage** | Per-model (exact version names) user distribution pie + code gen bar |
@@ -130,6 +165,37 @@ NDJSON file exported from the GitHub Copilot User Metrics API (one line = one us
 ```
 
 Key fields: `user_login`, `day`, `user_initiated_interaction_count`, `code_generation_activity_count`, `code_acceptance_activity_count`, `loc_added_sum`, `used_agent`, `used_chat`, `totals_by_feature[]`, `totals_by_ide[]`, `totals_by_language_feature[]`, `totals_by_language_model[]`
+
+## Importing Data
+
+### 1. File upload
+
+You can upload per-user metrics NDJSON/JSON files as before. To enable team-level analysis, also upload the `user-teams-1-day` report.
+
+### 2. Import from the browser
+
+Use the **Import from API** tab to enter an Enterprise or Organization slug, date range, and GitHub token. The app automatically fetches:
+
+- `users-1-day`
+- `user-teams-1-day`
+
+This uses only Copilot Metrics API `apiVersion=2026-03-10`. The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.
+
+### 3. Import with the `gh` CLI helper
+
+If you do not want to enter a token in the browser, run the helper after `gh auth login`.
+
+```bash
+npm run fetch:reports -- --enterprise <enterprise-slug> --from 2026-05-01 --to 2026-05-07 --out reports
+```
+
+For organization scope:
+
+```bash
+npm run fetch:reports -- --org <org> --from 2026-05-01 --to 2026-05-07 --out reports
+```
+
+Upload the generated `reports/copilot-users.ndjson` and `reports/copilot-user-teams.ndjson` files to the dashboard.
 
 ## Tech Stack
 
@@ -153,8 +219,10 @@ src/
 │   └── utils.ts                     # Utilities
 ├── components/
 │   ├── dashboard/
+│   │   ├── ApiImport.tsx            # Copilot Metrics API import
 │   │   ├── FileUpload.tsx           # File upload (drag & drop)
 │   │   ├── OverviewPage.tsx         # Overview page
+│   │   ├── TeamsPage.tsx            # Team analysis
 │   │   ├── UsersPage.tsx            # User activity
 │   │   ├── FeaturesPage.tsx         # Feature adoption
 │   │   ├── LanguagesPage.tsx        # Language & IDE

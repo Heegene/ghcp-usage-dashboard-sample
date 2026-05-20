@@ -175,6 +175,21 @@ const translations = {
   'upload.drop_multi': { ko: 'Per-User 메트릭 및/또는 User-Teams NDJSON 파일을 드래그하여 업로드', en: 'Drag & drop per-user metrics and/or user-teams NDJSON files' },
   'upload.team_loaded': { ko: 'User-Teams 데이터 로드 성공!', en: 'User-teams data loaded!' },
   'upload.step_api': { ko: 'Copilot Metrics API (apiVersion=2026-03-10)에서 NDJSON 다운로드', en: 'Download NDJSON from Copilot Metrics API (apiVersion=2026-03-10)' },
+
+  // API import
+  'api_import.tab_upload': { ko: '파일 업로드', en: 'File Upload' },
+  'api_import.tab_api': { ko: 'API에서 가져오기', en: 'Import from API' },
+  'api_import.title': { ko: 'Copilot Metrics API에서 가져오기', en: 'Import from Copilot Metrics API' },
+  'api_import.scope': { ko: '범위', en: 'Scope' },
+  'api_import.enterprise': { ko: 'Enterprise', en: 'Enterprise' },
+  'api_import.organization': { ko: 'Organization', en: 'Organization' },
+  'api_import.slug': { ko: 'Enterprise/Org slug', en: 'Enterprise/Org slug' },
+  'api_import.token': { ko: 'GitHub token', en: 'GitHub token' },
+  'api_import.privacy': { ko: '토큰은 브라우저 메모리에서만 사용되며 저장하지 않습니다. 토큰은 GitHub API 호출에만 전송되고, signed report URL은 토큰 없이 다운로드합니다.', en: 'The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.' },
+  'api_import.submit': { ko: '리포트 가져오기', en: 'Fetch reports' },
+  'api_import.loading': { ko: '가져오는 중...', en: 'Fetching...' },
+  'api_import.success': { ko: 'API 리포트 로드 성공!', en: 'API reports loaded successfully!' },
+  'api_import.error': { ko: 'API 리포트를 가져오지 못했습니다.', en: 'Failed to fetch API reports.' },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

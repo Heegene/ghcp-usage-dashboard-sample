@@ -138,7 +138,10 @@ function buildUserSummaries(raw: UserDayRecord[], users: string[]): UserSummary[
         if (l.language !== 'others' && l.language !== 'unknown') langsSet.add(l.language);
       }
       for (const m of r.totals_by_language_model) {
-        if (m.model && m.model !== 'unknown') modelsSet.add(m.model);
+        if (isSpecificModelName(m.model)) modelsSet.add(m.model);
+      }
+      for (const m of r.totals_by_model_feature) {
+        if (isSpecificModelName(m.model)) modelsSet.add(m.model);
       }
     }
 
@@ -266,18 +269,40 @@ function buildIdeBreakdown(raw: UserDayRecord[]): IdeStat[] {
 }
 
 function buildModelBreakdown(raw: UserDayRecord[]): ModelStat[] {
-  const map = new Map<string, { users: Set<string>; codeGen: number; codeAcc: number; locAdded: number }>();
+  const fromModelFeature = aggregateModels(raw, 'model_feature');
+  const fromLanguageModel = aggregateModels(raw, 'language_model');
+
+  if (fromModelFeature.some(m => !m.isGeneric)) return sortModels(fromModelFeature);
+  if (fromLanguageModel.some(m => !m.isGeneric)) return sortModels(fromLanguageModel);
+  return sortModels(fromModelFeature.length > 0 ? fromModelFeature : fromLanguageModel);
+}
+
+function aggregateModels(raw: UserDayRecord[], source: 'model_feature' | 'language_model'): ModelStat[] {
+  const map = new Map<string, { users: Set<string>; codeGen: number; codeAcc: number; locAdded: number; isGeneric: boolean }>();
+
+  const addModel = (model: string, userLogin: string, codeGen: number, codeAcc: number, locAdded: number) => {
+    const normalized = normalizeModelName(model);
+    if (!normalized) return;
+    const existing = map.get(normalized.name) || { users: new Set<string>(), codeGen: 0, codeAcc: 0, locAdded: 0, isGeneric: normalized.isGeneric };
+    existing.users.add(userLogin);
+    existing.codeGen += codeGen;
+    existing.codeAcc += codeAcc;
+    existing.locAdded += locAdded;
+    map.set(normalized.name, existing);
+  };
+
   for (const r of raw) {
-    for (const m of r.totals_by_language_model) {
-      if (!m.model || m.model === 'unknown') continue;
-      const existing = map.get(m.model) || { users: new Set<string>(), codeGen: 0, codeAcc: 0, locAdded: 0 };
-      existing.users.add(r.user_login);
-      existing.codeGen += m.code_generation_activity_count;
-      existing.codeAcc += m.code_acceptance_activity_count;
-      existing.locAdded += m.loc_added_sum;
-      map.set(m.model, existing);
+    if (source === 'model_feature') {
+      for (const m of r.totals_by_model_feature) {
+        addModel(m.model, r.user_login, m.code_generation_activity_count, m.code_acceptance_activity_count, m.loc_added_sum);
+      }
+    } else {
+      for (const m of r.totals_by_language_model) {
+        addModel(m.model, r.user_login, m.code_generation_activity_count, m.code_acceptance_activity_count, m.loc_added_sum);
+      }
     }
   }
+
   return [...map.entries()]
     .map(([model, d]) => ({
       model,
@@ -285,8 +310,25 @@ function buildModelBreakdown(raw: UserDayRecord[]): ModelStat[] {
       totalCodeGenerations: d.codeGen,
       totalCodeAcceptances: d.codeAcc,
       totalLocAdded: d.locAdded,
-    }))
-    .sort((a, b) => b.totalCodeGenerations - a.totalCodeGenerations);
+      isGeneric: d.isGeneric,
+    }));
+}
+
+function sortModels(models: ModelStat[]): ModelStat[] {
+  return models.sort((a, b) => b.totalCodeGenerations - a.totalCodeGenerations);
+}
+
+function normalizeModelName(model: string | undefined): { name: string; isGeneric: boolean } | null {
+  const trimmed = model?.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  if (lower === 'unknown') return null;
+  if (lower === 'others' || lower === 'other') return { name: 'others', isGeneric: true };
+  return { name: trimmed, isGeneric: false };
+}
+
+function isSpecificModelName(model: string | undefined): model is string {
+  return normalizeModelName(model)?.isGeneric === false;
 }
 
 export function formatNumber(num: number): string {
@@ -305,7 +347,7 @@ export function formatDate(dateStr: string): string {
 }
 
 // ============================================================
-// Team-level metrics (user-teams-1-day API, apiVersion=2026-03-10)
+// Enterprise team-level metrics (user-teams-1-day API, apiVersion=2026-03-10)
 // ============================================================
 
 export function parseUserTeamsNDJSON(content: string): UserTeamRecord[] {
@@ -318,14 +360,15 @@ export function parseUserTeamsNDJSON(content: string): UserTeamRecord[] {
 
   for (const obj of lines) {
     if (obj && typeof obj === 'object' && obj.team_id !== undefined && (obj.user_id || obj.user_login)) {
+      const slug = obj.slug || obj.team_slug || obj.team_name || obj.name || `team-${obj.team_id}`;
       records.push({
         user_id: obj.user_id || 0,
         user_login: obj.user_login || `user-${obj.user_id}`,
-        day: obj.day || '',
+        day: obj.day || obj.report_day || obj.date || '',
         organization_id: obj.organization_id ? String(obj.organization_id) : undefined,
         enterprise_id: obj.enterprise_id ? String(obj.enterprise_id) : undefined,
         team_id: Number(obj.team_id),
-        slug: obj.slug || `team-${obj.team_id}`,
+        slug,
       });
     }
   }
@@ -338,7 +381,7 @@ export function detectFileType(content: string): 'user' | 'team' | 'unknown' {
   try {
     const sample = firstLine ? JSON.parse(firstLine) : JSON.parse(trimmed)[0];
     if (!sample || typeof sample !== 'object') return 'unknown';
-    if ('team_id' in sample && 'slug' in sample) return 'team';
+    if ('team_id' in sample && ('user_login' in sample || 'user_id' in sample)) return 'team';
     if (('user_login' in sample || 'user_id' in sample) && ('code_generation_activity_count' in sample || 'totals_by_feature' in sample)) return 'user';
     return 'unknown';
   } catch {
@@ -373,11 +416,15 @@ export function processTeamData(
 
   // Group team records by team_id
   const teamGroups = new Map<number, { slug: string; records: { teamRecord: UserTeamRecord; userRecord: UserDayRecord }[] }>();
+  const seenTeamUserDays = new Set<string>();
 
   for (const tr of teamRecords) {
     const key = teamRecordKey(tr);
     const userRecord = userMap.get(key);
     if (!userRecord) continue; // no matching user activity
+    const dedupeKey = `${tr.team_id}:${tr.user_id}:${tr.day}:${tr.enterprise_id || ''}:${tr.organization_id || ''}`;
+    if (seenTeamUserDays.has(dedupeKey)) continue;
+    seenTeamUserDays.add(dedupeKey);
 
     if (!teamGroups.has(tr.team_id)) {
       teamGroups.set(tr.team_id, { slug: tr.slug, records: [] });
@@ -461,13 +508,13 @@ export function processTeamData(
 
   const allTeams = teamSummaries.map(t => ({ teamId: t.teamId, slug: t.slug }));
   const totalTeams = allTeams.length;
-  const avgTeamSize = totalTeams > 0 ? teamSummaries.reduce((sum, t) => sum + t.activeUsers, 0) / totalTeams : 0;
+  const avgActiveUsersPerTeam = totalTeams > 0 ? teamSummaries.reduce((sum, t) => sum + t.activeUsers, 0) / totalTeams : 0;
 
   return {
     teamSummaries,
     teamDailyTotals,
     allTeams,
     totalTeams,
-    avgTeamSize,
+    avgActiveUsersPerTeam,
   };
 }

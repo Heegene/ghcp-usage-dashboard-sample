@@ -6,13 +6,17 @@ import { join } from 'node:path';
 const API_VERSION = '2026-03-10';
 
 const args = parseArgs(process.argv.slice(2));
-const scope = args.enterprise ? 'enterprise' : args.org ? 'organization' : '';
-const slug = args.enterprise || args.org || '';
+const enterprise = args.enterprise || '';
 const from = args.from;
 const to = args.to || args.from;
 const outDir = args.out || 'reports';
 
-if (!scope || !slug || !from) {
+if (args.org) {
+  console.error('Organization scope is not supported. Use --enterprise with the Enterprise slug.');
+  process.exit(1);
+}
+
+if (!enterprise || !from) {
   usage();
   process.exit(1);
 }
@@ -25,10 +29,10 @@ mkdirSync(outDir, { recursive: true });
 
 for (const day of days) {
   console.log(`Fetching ${day} per-user report...`);
-  usersChunks.push(await fetchReport(scope, slug, day, 'users-1-day'));
+  usersChunks.push(await fetchReport(enterprise, day, 'users-1-day'));
 
   console.log(`Fetching ${day} user-teams report...`);
-  teamsChunks.push(await fetchReport(scope, slug, day, 'user-teams-1-day'));
+  teamsChunks.push(await fetchReport(enterprise, day, 'user-teams-1-day'));
 }
 
 const usersPath = join(outDir, 'copilot-users.ndjson');
@@ -39,17 +43,17 @@ writeFileSync(teamsPath, teamsChunks.filter(Boolean).join('\n'));
 console.log(`Wrote ${usersPath}`);
 console.log(`Wrote ${teamsPath}`);
 
-async function fetchReport(reportScope, reportSlug, day, reportKind) {
-  const entityPath = reportScope === 'enterprise'
-    ? `enterprises/${encodeURIComponent(reportSlug)}`
-    : `orgs/${encodeURIComponent(reportSlug)}`;
-  const endpoint = `/${entityPath}/copilot/metrics/reports/${reportKind}?day=${day}&apiVersion=${API_VERSION}`;
-  const response = JSON.parse(execFileSync('gh', [
+async function fetchReport(enterpriseSlug, day, reportKind) {
+  const endpoint = `/enterprises/${encodeURIComponent(enterpriseSlug)}/copilot/metrics/reports/${reportKind}?day=${day}&apiVersion=${API_VERSION}`;
+  const rawResponse = execFileSync('gh', [
     'api',
     '-H', `X-GitHub-Api-Version: ${API_VERSION}`,
     '-H', 'Accept: application/vnd.github+json',
     endpoint,
-  ], { encoding: 'utf8' }));
+  ], { encoding: 'utf8' });
+  if (!rawResponse.trim()) return '';
+
+  const response = JSON.parse(rawResponse);
 
   const links = response.download_links || [];
   const chunks = [];
@@ -58,21 +62,41 @@ async function fetchReport(reportScope, reportSlug, day, reportKind) {
     if (!download.ok) {
       throw new Error(`Download failed (${download.status}) for ${reportKind} on ${day}`);
     }
-    chunks.push(normalizeReportContent(await download.text()));
+    chunks.push(normalizeReportContent(await download.text(), day));
   }
   return chunks.filter(Boolean).join('\n');
 }
 
-function normalizeReportContent(content) {
+function normalizeReportContent(content, day) {
   const trimmed = content.trim();
   if (!trimmed) return '';
-  if (!trimmed.startsWith('[')) return trimmed;
+  if (!trimmed.startsWith('[')) {
+    return trimmed
+      .split('\n')
+      .map(line => {
+        try {
+          return normalizeReportRow(JSON.parse(line), day);
+        } catch {
+          return line;
+        }
+      })
+      .join('\n');
+  }
 
   const parsed = JSON.parse(trimmed);
   if (!Array.isArray(parsed)) {
     throw new Error('Downloaded report JSON was not an array.');
   }
-  return parsed.map(row => JSON.stringify(row)).join('\n');
+  return parsed.map(row => normalizeReportRow(row, day)).join('\n');
+}
+
+function normalizeReportRow(row, day) {
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    if (typeof row.day !== 'string' || row.day.length === 0) {
+      return JSON.stringify({ ...row, day });
+    }
+  }
+  return JSON.stringify(row);
 }
 
 function enumerateDays(fromDate, toDate) {
@@ -107,7 +131,6 @@ function parseArgs(argv) {
 function usage() {
   console.error(`Usage:
   npm run fetch:reports -- --enterprise <slug> --from YYYY-MM-DD [--to YYYY-MM-DD] [--out reports]
-  npm run fetch:reports -- --org <org> --from YYYY-MM-DD [--to YYYY-MM-DD] [--out reports]
 
 Requires: gh auth login with an account that can view Copilot Metrics.
 Uses Copilot Metrics API apiVersion=${API_VERSION}.`);

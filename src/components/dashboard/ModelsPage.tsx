@@ -10,9 +10,10 @@ const tooltipStyle = { backgroundColor: 'oklch(0.2 0.02 260)', border: '1px soli
 
 export function ModelsPage({ data }: { data: ProcessedData }) {
   const { t } = useI18n();
+  const hasGenericModels = data.modelBreakdown.some(m => m.isGeneric);
 
   const chartData = data.modelBreakdown.slice(0, 10).map(m => ({
-    name: m.model,
+    name: m.isGeneric ? t('models.other_redacted') : m.model,
     userCount: m.userCount,
     codeGen: m.totalCodeGenerations,
     locAdded: m.totalLocAdded,
@@ -21,6 +22,11 @@ export function ModelsPage({ data }: { data: ProcessedData }) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">{t('models.title')}</h2>
+      {hasGenericModels && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-200">
+          {t('models.redacted_note')}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

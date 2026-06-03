@@ -5,18 +5,18 @@ export type Lang = 'ko' | 'en';
 const translations = {
   // Header
   'app.title': { ko: 'Copilot 사용 분석', en: 'Copilot Usage Analytics' },
-  'app.subtitle': { ko: '유저 레벨 대시보드', en: 'User-Level Dashboard' },
+  'app.subtitle': { ko: '유저 및 Enterprise 팀 대시보드', en: 'User and Enterprise Team Dashboard' },
   'app.days_of_data': { ko: '일간 데이터', en: 'days of data' },
   'app.users': { ko: '명', en: 'users' },
   'app.clear': { ko: '초기화', en: 'Clear' },
 
   // Upload
   'upload.title': { ko: 'Copilot 사용량 분석', en: 'Analyze Copilot Usage' },
-  'upload.desc': { ko: 'GitHub Copilot 유저별 사용량 NDJSON 파일을 업로드하여 개인별 메트릭을 시각화합니다.', en: 'Upload your GitHub Copilot user-level usage NDJSON file to visualize individual metrics.' },
+  'upload.desc': { ko: 'GitHub Copilot 유저별 사용량과 Enterprise 팀 메트릭을 시각화합니다.', en: 'Visualize GitHub Copilot user-level usage and Enterprise team metrics.' },
   'upload.drop': { ko: 'NDJSON 파일을 드래그하거나 클릭하여 업로드', en: 'Drag & drop NDJSON file or click to upload' },
   'upload.formats': { ko: '지원 형식: .ndjson, .json, .jsonl', en: 'Supported: .ndjson, .json, .jsonl' },
   'upload.how': { ko: '메트릭 파일 가져오는 방법', en: 'How to get your metrics' },
-  'upload.step1': { ko: 'GitHub 조직 설정으로 이동', en: 'Go to your GitHub organization settings' },
+  'upload.step1': { ko: 'GitHub Enterprise Copilot Metrics API 또는 내보내기 준비', en: 'Prepare the GitHub Enterprise Copilot Metrics API or export' },
   'upload.step2': { ko: 'Copilot → Usage 탭 이동', en: 'Navigate to Copilot → Usage' },
   'upload.step3': { ko: 'NDJSON 형식으로 내보내기', en: 'Export the usage data as NDJSON' },
   'upload.step4': { ko: '여기에 파일 업로드', en: 'Upload the file here' },
@@ -81,6 +81,8 @@ const translations = {
   // Models
   'models.title': { ko: 'AI 모델 사용 분석', en: 'AI Model Usage' },
   'models.name': { ko: '모델', en: 'Model' },
+  'models.other_redacted': { ko: '기타/비공개', en: 'Other / redacted' },
+  'models.redacted_note': { ko: '모델명이 others인 경우 API 응답에 구체적인 모델명이 없는 경우입니다.', en: 'If models only appear as others, the GitHub API returned generalized model names for the selected date range or scope. The dashboard prefers model-by-feature data when available, but it cannot recover specific model names that are not present in the API response.' },
 
   // ESSP
   'essp.title': { ko: 'ESSP 인사이트', en: 'ESSP Insights' },
@@ -142,12 +144,13 @@ const translations = {
   'filter.to': { ko: '종료일', en: 'To' },
 
   // Teams
-  'nav.teams': { ko: '팀별 분석', en: 'Team Analysis' },
-  'teams.title': { ko: '팀별 분석', en: 'Team Analysis' },
-  'teams.subtitle': { ko: 'user-teams 리포트와 per-user 메트릭을 조인하여 팀 단위 Copilot 사용량을 분석합니다.', en: 'Team-level Copilot usage by joining user-teams report with per-user metrics.' },
+  'nav.teams': { ko: 'Enterprise 팀 분석', en: 'Enterprise Teams' },
+  'teams.title': { ko: 'Enterprise 팀 분석', en: 'Enterprise Team Analysis' },
+  'teams.subtitle': { ko: 'Enterprise user-teams 리포트와 per-user 메트릭을 조인하여 팀 단위 Copilot 사용량을 분석합니다.', en: 'Team-level Copilot usage by joining the Enterprise user-teams report with per-user metrics.' },
   'teams.no_data': { ko: 'user-teams NDJSON 파일을 추가로 업로드해주세요.', en: 'Please upload a user-teams NDJSON file.' },
   'teams.total_teams': { ko: '전체 팀', en: 'Total Teams' },
-  'teams.avg_team_size': { ko: '평균 팀 크기', en: 'Avg Team Size' },
+  'teams.avg_active_users': { ko: '팀당 평균 활성 유저', en: 'Avg Active Users/Team' },
+  'teams.per_team': { ko: '팀당', en: 'per team' },
   'teams.most_active': { ko: '가장 활발한 팀', en: 'Most Active Team' },
   'teams.overview': { ko: '팀 개요', en: 'Team Overview' },
   'teams.comparison': { ko: '팀 비교', en: 'Team Comparison' },
@@ -179,17 +182,18 @@ const translations = {
   // API import
   'api_import.tab_upload': { ko: '파일 업로드', en: 'File Upload' },
   'api_import.tab_api': { ko: 'API에서 가져오기', en: 'Import from API' },
-  'api_import.title': { ko: 'Copilot Metrics API에서 가져오기', en: 'Import from Copilot Metrics API' },
-  'api_import.scope': { ko: '범위', en: 'Scope' },
-  'api_import.enterprise': { ko: 'Enterprise', en: 'Enterprise' },
-  'api_import.organization': { ko: 'Organization', en: 'Organization' },
-  'api_import.slug': { ko: 'Enterprise/Org slug', en: 'Enterprise/Org slug' },
+  'api_import.title': { ko: 'Enterprise Copilot Metrics API에서 가져오기', en: 'Import from Enterprise Copilot Metrics API' },
+  'api_import.slug': { ko: 'Enterprise slug', en: 'Enterprise slug' },
+  'api_import.enterprise_only': { ko: 'Enterprise 범위만 지원합니다. 모든 API 호출은 2026-03-10 버전으로 고정됩니다.', en: 'Only Enterprise scope is supported. Every API request is fixed to version 2026-03-10.' },
   'api_import.token': { ko: 'GitHub token', en: 'GitHub token' },
-  'api_import.privacy': { ko: '토큰은 브라우저 메모리에서만 사용되며 저장하지 않습니다. 토큰은 GitHub API 호출에만 전송되고, signed report URL은 토큰 없이 다운로드합니다.', en: 'The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.' },
+  'api_import.privacy': { ko: '토큰은 저장하지 않습니다. 로컬 개발 환경에서는 브라우저 제한을 피하기 위해 localhost 프록시로만 전달하고, 배포 환경에서는 GitHub API 호출에만 전송합니다. API 버전은 항상 2026-03-10입니다.', en: 'The token is not stored. In local development, it is sent only to the localhost proxy to avoid browser restrictions; in deployed environments, it is sent only to GitHub API. The API version is always 2026-03-10.' },
+  'api_import.fallback': { ko: '브라우저에서 Load failed가 계속 발생하면 README의 gh CLI helper로 리포트를 다운로드한 뒤 생성된 NDJSON 파일을 업로드하세요.', en: 'If the browser keeps showing Load failed, download reports with the gh CLI helper in README and upload the generated NDJSON files.' },
   'api_import.submit': { ko: '리포트 가져오기', en: 'Fetch reports' },
   'api_import.loading': { ko: '가져오는 중...', en: 'Fetching...' },
   'api_import.success': { ko: 'API 리포트 로드 성공!', en: 'API reports loaded successfully!' },
   'api_import.error': { ko: 'API 리포트를 가져오지 못했습니다.', en: 'Failed to fetch API reports.' },
+  'api_import.no_user_data': { ko: 'users-1-day 리포트에서 유효한 사용자 메트릭을 찾지 못했습니다.', en: 'No valid user metrics were found in the users-1-day report.' },
+  'api_import.no_team_data': { ko: 'API 호출은 성공했지만 user-teams-1-day 리포트가 비어 있습니다. 해당 날짜의 팀 데이터가 없거나, 5명 미만 팀 제외 조건 또는 권한 범위를 확인하세요.', en: 'The API call succeeded, but the user-teams-1-day report was empty. Check whether the selected dates have team data, whether teams are excluded by the fewer-than-5-users rule, or whether the token has the right scope.' },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

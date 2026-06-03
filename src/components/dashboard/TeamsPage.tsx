@@ -55,7 +55,7 @@ export function TeamsPage({ teamData }: TeamsPageProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
   const [comparisonMetric, setComparisonMetric] = useState<string>('activeUsers');
 
-  const { teamSummaries, teamDailyTotals, totalTeams, avgTeamSize } = teamData;
+  const { teamSummaries, teamDailyTotals, totalTeams, avgActiveUsersPerTeam } = teamData;
 
   const mostActive = teamSummaries[0];
 
@@ -155,9 +155,9 @@ export function TeamsPage({ teamData }: TeamsPageProps) {
           delay={0}
         />
         <StatCard
-          title={t('teams.avg_team_size')}
-          value={avgTeamSize.toFixed(1)}
-          subtitle={t('teams.active_users')}
+          title={t('teams.avg_active_users')}
+          value={avgActiveUsersPerTeam.toFixed(1)}
+          subtitle={t('teams.per_team')}
           trend="neutral"
           delay={0.1}
         />

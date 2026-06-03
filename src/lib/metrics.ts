@@ -305,7 +305,7 @@ export function formatDate(dateStr: string): string {
 }
 
 // ============================================================
-// Team-level metrics (user-teams-1-day API, apiVersion=2026-03-10)
+// Enterprise team-level metrics (user-teams-1-day API, apiVersion=2026-03-10)
 // ============================================================
 
 export function parseUserTeamsNDJSON(content: string): UserTeamRecord[] {
@@ -318,14 +318,15 @@ export function parseUserTeamsNDJSON(content: string): UserTeamRecord[] {
 
   for (const obj of lines) {
     if (obj && typeof obj === 'object' && obj.team_id !== undefined && (obj.user_id || obj.user_login)) {
+      const slug = obj.slug || obj.team_slug || obj.team_name || obj.name || `team-${obj.team_id}`;
       records.push({
         user_id: obj.user_id || 0,
         user_login: obj.user_login || `user-${obj.user_id}`,
-        day: obj.day || '',
+        day: obj.day || obj.report_day || obj.date || '',
         organization_id: obj.organization_id ? String(obj.organization_id) : undefined,
         enterprise_id: obj.enterprise_id ? String(obj.enterprise_id) : undefined,
         team_id: Number(obj.team_id),
-        slug: obj.slug || `team-${obj.team_id}`,
+        slug,
       });
     }
   }
@@ -338,7 +339,7 @@ export function detectFileType(content: string): 'user' | 'team' | 'unknown' {
   try {
     const sample = firstLine ? JSON.parse(firstLine) : JSON.parse(trimmed)[0];
     if (!sample || typeof sample !== 'object') return 'unknown';
-    if ('team_id' in sample && 'slug' in sample) return 'team';
+    if ('team_id' in sample && ('user_login' in sample || 'user_id' in sample)) return 'team';
     if (('user_login' in sample || 'user_id' in sample) && ('code_generation_activity_count' in sample || 'totals_by_feature' in sample)) return 'user';
     return 'unknown';
   } catch {
@@ -373,11 +374,15 @@ export function processTeamData(
 
   // Group team records by team_id
   const teamGroups = new Map<number, { slug: string; records: { teamRecord: UserTeamRecord; userRecord: UserDayRecord }[] }>();
+  const seenTeamUserDays = new Set<string>();
 
   for (const tr of teamRecords) {
     const key = teamRecordKey(tr);
     const userRecord = userMap.get(key);
     if (!userRecord) continue; // no matching user activity
+    const dedupeKey = `${tr.team_id}:${tr.user_id}:${tr.day}:${tr.enterprise_id || ''}:${tr.organization_id || ''}`;
+    if (seenTeamUserDays.has(dedupeKey)) continue;
+    seenTeamUserDays.add(dedupeKey);
 
     if (!teamGroups.has(tr.team_id)) {
       teamGroups.set(tr.team_id, { slug: tr.slug, records: [] });
@@ -461,13 +466,13 @@ export function processTeamData(
 
   const allTeams = teamSummaries.map(t => ({ teamId: t.teamId, slug: t.slug }));
   const totalTeams = allTeams.length;
-  const avgTeamSize = totalTeams > 0 ? teamSummaries.reduce((sum, t) => sum + t.activeUsers, 0) / totalTeams : 0;
+  const avgActiveUsersPerTeam = totalTeams > 0 ? teamSummaries.reduce((sum, t) => sum + t.activeUsers, 0) / totalTeams : 0;
 
   return {
     teamSummaries,
     teamDailyTotals,
     allTeams,
     totalTeams,
-    avgTeamSize,
+    avgActiveUsersPerTeam,
   };
 }

@@ -1,6 +1,6 @@
 # GitHub Copilot 사용량 분석 대시보드
 
-GitHub Copilot **유저 레벨** 사용 데이터(NDJSON)를 업로드하면, 개인별/기능별/언어별/모델별 메트릭을 자동으로 시각화하는 대시보드입니다.
+GitHub Copilot **유저 레벨** 사용 데이터(NDJSON)를 업로드하면, 개인별/기능별/언어별/모델별 메트릭을 자동으로 시각화하는 대시보드입니다. Enterprise `user-teams-1-day` 리포트를 함께 사용하면 팀 기준 메트릭도 제공합니다.
 GitHub [Engineering System Success Playbook (ESSP)](./2025-05-28-GitHub_ESSP_Playbook.pdf) 기반의 Leading Indicator도 함께 제공합니다.
 
 > **English version follows below.**
@@ -42,12 +42,12 @@ GitHub Copilot User Metrics API에서 내보낸 **NDJSON** 파일 (한 줄 = 한
 
 ### 2. 브라우저에서 API로 가져오기
 
-대시보드의 **API에서 가져오기** 탭에서 Enterprise 또는 Organization slug, 날짜 범위, GitHub token을 입력하면 다음 리포트를 자동으로 가져옵니다.
+대시보드의 **API에서 가져오기** 탭에서 Enterprise slug, 날짜 범위, GitHub token을 입력하면 다음 Enterprise 리포트를 자동으로 가져옵니다.
 
 - `users-1-day`
 - `user-teams-1-day`
 
-이 기능은 Copilot Metrics API `apiVersion=2026-03-10`만 사용합니다. Token은 브라우저 메모리에서만 사용되며 저장하지 않습니다. Token은 GitHub API 호출에만 전송되고, signed report URL은 token 없이 다운로드합니다.
+이 기능은 Enterprise Copilot Metrics API `apiVersion=2026-03-10`만 사용합니다. Token은 브라우저 메모리에서만 사용되며 저장하지 않습니다. Token은 GitHub API 호출에만 전송되고, signed report URL은 token 없이 다운로드합니다.
 
 ### 3. `gh` CLI helper로 가져오기
 
@@ -55,12 +55,6 @@ GitHub Copilot User Metrics API에서 내보낸 **NDJSON** 파일 (한 줄 = 한
 
 ```bash
 npm run fetch:reports -- --enterprise <enterprise-slug> --from 2026-05-01 --to 2026-05-07 --out reports
-```
-
-Organization 범위는 다음처럼 실행합니다.
-
-```bash
-npm run fetch:reports -- --org <org> --from 2026-05-01 --to 2026-05-07 --out reports
 ```
 
 생성된 `reports/copilot-users.ndjson`와 `reports/copilot-user-teams.ndjson` 파일을 대시보드에 업로드하면 됩니다.
@@ -81,7 +75,7 @@ src/
 ├── App.tsx                          # 메인 레이아웃 (사이드바 + 라우팅)
 ├── main.tsx                         # 엔트리포인트 (I18nProvider)
 ├── lib/
-│   ├── types.ts                     # 유저 레벨 데이터 타입 정의
+│   ├── types.ts                     # 유저/팀 데이터 타입 정의
 │   ├── metrics.ts                   # NDJSON 파싱 + 집계 로직
 │   ├── i18n.tsx                     # 한국어/영어 번역 시스템
 │   └── utils.ts                     # 유틸리티
@@ -134,7 +128,7 @@ MIT
 
 # GitHub Copilot Usage Analytics Dashboard
 
-Upload GitHub Copilot **user-level** usage data (NDJSON) to automatically visualize per-user, per-feature, per-language, and per-model metrics.
+Upload GitHub Copilot **user-level** usage data (NDJSON) to automatically visualize per-user, per-feature, per-language, and per-model metrics. Add the Enterprise `user-teams-1-day` report to enable team-level metrics.
 Also provides Leading Indicators based on the GitHub [Engineering System Success Playbook (ESSP)](./2025-05-28-GitHub_ESSP_Playbook.pdf).
 
 ## Key Features
@@ -174,12 +168,12 @@ You can upload per-user metrics NDJSON/JSON files as before. To enable team-leve
 
 ### 2. Import from the browser
 
-Use the **Import from API** tab to enter an Enterprise or Organization slug, date range, and GitHub token. The app automatically fetches:
+Use the **Import from API** tab to enter an Enterprise slug, date range, and GitHub token. The app automatically fetches these Enterprise reports:
 
 - `users-1-day`
 - `user-teams-1-day`
 
-This uses only Copilot Metrics API `apiVersion=2026-03-10`. The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.
+This uses only the Enterprise Copilot Metrics API `apiVersion=2026-03-10`. The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.
 
 ### 3. Import with the `gh` CLI helper
 
@@ -187,12 +181,6 @@ If you do not want to enter a token in the browser, run the helper after `gh aut
 
 ```bash
 npm run fetch:reports -- --enterprise <enterprise-slug> --from 2026-05-01 --to 2026-05-07 --out reports
-```
-
-For organization scope:
-
-```bash
-npm run fetch:reports -- --org <org> --from 2026-05-01 --to 2026-05-07 --out reports
 ```
 
 Upload the generated `reports/copilot-users.ndjson` and `reports/copilot-user-teams.ndjson` files to the dashboard.
@@ -213,7 +201,7 @@ src/
 ├── App.tsx                          # Main layout (sidebar + routing)
 ├── main.tsx                         # Entry point (I18nProvider)
 ├── lib/
-│   ├── types.ts                     # User-level data type definitions
+│   ├── types.ts                     # User and team data type definitions
 │   ├── metrics.ts                   # NDJSON parsing + aggregation logic
 │   ├── i18n.tsx                     # Korean/English translation system
 │   └── utils.ts                     # Utilities

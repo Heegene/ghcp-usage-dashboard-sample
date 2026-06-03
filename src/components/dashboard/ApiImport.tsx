@@ -4,8 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { fetchCopilotReports, type CopilotReportScope } from '@/lib/copilotApi';
+import { fetchCopilotReports } from '@/lib/copilotApi';
 import { useI18n } from '@/lib/i18n';
 
 interface ApiImportProps {
@@ -14,8 +13,7 @@ interface ApiImportProps {
 
 export function ApiImport({ onReportsLoaded }: ApiImportProps) {
   const { t } = useI18n();
-  const [scope, setScope] = useState<CopilotReportScope>('enterprise');
-  const [slug, setSlug] = useState('');
+  const [enterprise, setEnterprise] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [token, setToken] = useState('');
@@ -30,8 +28,7 @@ export function ApiImport({ onReportsLoaded }: ApiImportProps) {
     try {
       const reports = await fetchCopilotReports({
         token,
-        scope,
-        slug,
+        enterprise,
         from,
         to,
         onProgress: setProgress,
@@ -58,28 +55,15 @@ export function ApiImport({ onReportsLoaded }: ApiImportProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">{t('api_import.scope')}</label>
-              <Select value={scope} onValueChange={value => setScope(value as CopilotReportScope)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="enterprise">{t('api_import.enterprise')}</SelectItem>
-                  <SelectItem value="organization">{t('api_import.organization')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">{t('api_import.slug')}</label>
-              <Input
-                value={slug}
-                onChange={event => setSlug(event.target.value)}
-                placeholder={scope === 'enterprise' ? 'my-enterprise' : 'my-org'}
-                required
-              />
-            </div>
+          <div>
+            <label className="text-xs text-muted-foreground">{t('api_import.slug')}</label>
+            <Input
+              value={enterprise}
+              onChange={event => setEnterprise(event.target.value)}
+              placeholder="my-enterprise"
+              required
+            />
+            <p className="mt-1 text-xs text-muted-foreground">{t('api_import.enterprise_only')}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

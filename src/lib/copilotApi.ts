@@ -1,11 +1,8 @@
 export const COPILOT_METRICS_API_VERSION = '2026-03-10';
 
-export type CopilotReportScope = 'enterprise' | 'organization';
-
 export interface FetchCopilotReportsOptions {
   token: string;
-  scope: CopilotReportScope;
-  slug: string;
+  enterprise: string;
   from: string;
   to: string;
   onProgress?: (message: string) => void;
@@ -44,16 +41,15 @@ export function enumerateDays(from: string, to: string): string[] {
 
 export async function fetchCopilotReports({
   token,
-  scope,
-  slug,
+  enterprise,
   from,
   to,
   onProgress,
 }: FetchCopilotReportsOptions): Promise<FetchedCopilotReports> {
   const trimmedToken = token.trim();
-  const trimmedSlug = slug.trim();
+  const trimmedEnterprise = enterprise.trim();
   if (!trimmedToken) throw new Error('GitHub token is required.');
-  if (!trimmedSlug) throw new Error('Enterprise or organization slug is required.');
+  if (!trimmedEnterprise) throw new Error('Enterprise slug is required.');
 
   const days = enumerateDays(from, to);
   const userChunks: string[] = [];
@@ -61,10 +57,10 @@ export async function fetchCopilotReports({
 
   for (const day of days) {
     onProgress?.(`Fetching ${day} per-user report...`);
-    userChunks.push(await fetchReportForDay(trimmedToken, scope, trimmedSlug, day, 'users-1-day'));
+    userChunks.push(await fetchReportForDay(trimmedToken, trimmedEnterprise, day, 'users-1-day'));
 
     onProgress?.(`Fetching ${day} user-teams report...`);
-    teamChunks.push(await fetchReportForDay(trimmedToken, scope, trimmedSlug, day, 'user-teams-1-day'));
+    teamChunks.push(await fetchReportForDay(trimmedToken, trimmedEnterprise, day, 'user-teams-1-day'));
   }
 
   onProgress?.(`Fetched ${days.length} day(s).`);
@@ -77,12 +73,11 @@ export async function fetchCopilotReports({
 
 async function fetchReportForDay(
   token: string,
-  scope: CopilotReportScope,
-  slug: string,
+  enterprise: string,
   day: string,
   kind: ReportKind
 ): Promise<string> {
-  const endpoint = buildReportEndpoint(scope, slug, day, kind);
+  const endpoint = buildReportEndpoint(enterprise, day, kind);
   const response = await fetch(endpoint, {
     headers: {
       Accept: 'application/vnd.github+json',
@@ -90,6 +85,8 @@ async function fetchReportForDay(
       'X-GitHub-Api-Version': COPILOT_METRICS_API_VERSION,
     },
   });
+
+  if (response.status === 204) return '';
 
   if (!response.ok) {
     const text = await response.text();
@@ -100,33 +97,53 @@ async function fetchReportForDay(
   const links = payload.download_links || [];
   if (links.length === 0) return '';
 
-  const chunks = await Promise.all(links.map(downloadReportLink));
+  const chunks = await Promise.all(links.map(link => downloadReportLink(link, day)));
   return chunks.filter(Boolean).join('\n');
 }
 
-function buildReportEndpoint(scope: CopilotReportScope, slug: string, day: string, kind: ReportKind): string {
-  const encodedSlug = encodeURIComponent(slug);
-  const entityPath = scope === 'enterprise' ? `enterprises/${encodedSlug}` : `orgs/${encodedSlug}`;
+function buildReportEndpoint(enterprise: string, day: string, kind: ReportKind): string {
+  const encodedEnterprise = encodeURIComponent(enterprise);
   const query = new URLSearchParams({ day, apiVersion: COPILOT_METRICS_API_VERSION });
-  return `https://api.github.com/${entityPath}/copilot/metrics/reports/${kind}?${query.toString()}`;
+  return `https://api.github.com/enterprises/${encodedEnterprise}/copilot/metrics/reports/${kind}?${query.toString()}`;
 }
 
-async function downloadReportLink(url: string): Promise<string> {
+async function downloadReportLink(url: string, day: string): Promise<string> {
   const response = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!response.ok) {
     throw new Error(`Report download failed (${response.status}) from signed URL.`);
   }
-  return normalizeReportContent(await response.text());
+  return normalizeReportContent(await response.text(), day);
 }
 
-function normalizeReportContent(content: string): string {
+function normalizeReportContent(content: string, day: string): string {
   const trimmed = content.trim();
   if (!trimmed) return '';
-  if (!trimmed.startsWith('[')) return trimmed;
+  if (!trimmed.startsWith('[')) {
+    return trimmed
+      .split('\n')
+      .map(line => {
+        try {
+          return normalizeReportRow(JSON.parse(line), day);
+        } catch {
+          return line;
+        }
+      })
+      .join('\n');
+  }
 
   const parsed = JSON.parse(trimmed) as unknown;
   if (!Array.isArray(parsed)) {
     throw new Error('Downloaded report JSON was not an array.');
   }
-  return parsed.map(row => JSON.stringify(row)).join('\n');
+  return parsed.map(row => normalizeReportRow(row, day)).join('\n');
+}
+
+function normalizeReportRow(row: unknown, day: string): string {
+  if (row && typeof row === 'object' && !Array.isArray(row)) {
+    const record = row as Record<string, unknown>;
+    if (typeof record.day !== 'string' || record.day.length === 0) {
+      return JSON.stringify({ ...record, day });
+    }
+  }
+  return JSON.stringify(row);
 }

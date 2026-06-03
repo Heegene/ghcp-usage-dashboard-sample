@@ -255,5 +255,5 @@ export interface TeamProcessedData {
   teamDailyTotals: TeamDailyTotal[];
   allTeams: { teamId: number; slug: string }[];
   totalTeams: number;
-  avgTeamSize: number;
+  avgActiveUsersPerTeam: number;
 }

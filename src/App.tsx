@@ -87,10 +87,26 @@ function App() {
   }, [t]);
 
   const handleApiReportsLoad = useCallback((userContent: string, teamContent: string) => {
-    handleFileLoad(userContent, 'user');
-    handleFileLoad(teamContent, 'team');
+    const parsedUsers = parseUserNDJSON(userContent);
+    if (parsedUsers.length === 0) {
+      throw new Error(t('api_import.no_user_data'));
+    }
+
+    setRawRecords(parsedUsers);
+    const dates = [...new Set(parsedUsers.map(r => r.day))].sort();
+    setDateFrom(dates[0] || '');
+    setDateTo(dates[dates.length - 1] || '');
+
+    const parsedTeams = teamContent.trim() ? parseUserTeamsNDJSON(teamContent) : [];
+    if (parsedTeams.length > 0) {
+      setRawTeamRecords(parsedTeams);
+    } else {
+      setRawTeamRecords(null);
+      toast.info(t('api_import.no_team_data'));
+    }
+
     setPage('teams');
-  }, [handleFileLoad]);
+  }, [t]);
 
   const handleClear = useCallback(() => {
     setRawRecords(null);

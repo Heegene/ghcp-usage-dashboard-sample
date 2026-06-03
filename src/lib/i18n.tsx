@@ -190,6 +190,8 @@ const translations = {
   'api_import.loading': { ko: '가져오는 중...', en: 'Fetching...' },
   'api_import.success': { ko: 'API 리포트 로드 성공!', en: 'API reports loaded successfully!' },
   'api_import.error': { ko: 'API 리포트를 가져오지 못했습니다.', en: 'Failed to fetch API reports.' },
+  'api_import.no_user_data': { ko: 'users-1-day 리포트에서 유효한 사용자 메트릭을 찾지 못했습니다.', en: 'No valid user metrics were found in the users-1-day report.' },
+  'api_import.no_team_data': { ko: 'API 호출은 성공했지만 user-teams-1-day 리포트가 비어 있습니다. 해당 날짜의 팀 데이터가 없거나, 5명 미만 팀 제외 조건 또는 권한 범위를 확인하세요.', en: 'The API call succeeded, but the user-teams-1-day report was empty. Check whether the selected dates have team data, whether teams are excluded by the fewer-than-5-users rule, or whether the token has the right scope.' },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

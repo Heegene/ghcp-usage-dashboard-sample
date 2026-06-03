@@ -35,6 +35,7 @@ export function ApiImport({ onReportsLoaded }: ApiImportProps) {
       });
       onReportsLoaded(reports.userContent, reports.teamContent);
       setToken('');
+      setProgress('');
       toast.success(t('api_import.success'));
     } catch (error) {
       const message = error instanceof Error ? error.message : t('api_import.error');

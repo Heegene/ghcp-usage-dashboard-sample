@@ -51,6 +51,11 @@ export async function fetchCopilotReports({
   if (!trimmedToken) throw new Error('GitHub token is required.');
   if (!trimmedEnterprise) throw new Error('Enterprise slug is required.');
 
+  if (canUseLocalProxy()) {
+    onProgress?.('Fetching reports through the local dev proxy...');
+    return fetchReportsViaLocalProxy(trimmedToken, trimmedEnterprise, from, to);
+  }
+
   const days = enumerateDays(from, to);
   const userChunks: string[] = [];
   const teamChunks: string[] = [];
@@ -71,6 +76,42 @@ export async function fetchCopilotReports({
   };
 }
 
+async function fetchReportsViaLocalProxy(
+  token: string,
+  enterprise: string,
+  from: string,
+  to: string
+): Promise<FetchedCopilotReports> {
+  let response: Response;
+  try {
+    response = await fetch('/api/copilot-reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, enterprise, from, to }),
+    });
+  } catch (error) {
+    throw toBrowserLoadError(error, 'Local dev proxy request failed to load');
+  }
+
+  const payload = await response.json().catch(() => null) as Partial<FetchedCopilotReports> & { error?: string } | null;
+  if (!response.ok) {
+    throw new Error(payload?.error || `Local dev proxy failed (${response.status}).`);
+  }
+  if (!payload?.userContent || !Array.isArray(payload.days)) {
+    throw new Error('Local dev proxy returned an invalid report payload.');
+  }
+  return {
+    userContent: payload.userContent,
+    teamContent: payload.teamContent || '',
+    days: payload.days,
+  };
+}
+
+function canUseLocalProxy(): boolean {
+  if (typeof window === 'undefined') return false;
+  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
 async function fetchReportForDay(
   token: string,
   enterprise: string,
@@ -78,13 +119,18 @@ async function fetchReportForDay(
   kind: ReportKind
 ): Promise<string> {
   const endpoint = buildReportEndpoint(enterprise, day, kind);
-  const response = await fetch(endpoint, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': COPILOT_METRICS_API_VERSION,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': COPILOT_METRICS_API_VERSION,
+      },
+    });
+  } catch (error) {
+    throw toBrowserLoadError(error, `GitHub API request failed to load for ${kind} on ${day}`);
+  }
 
   if (response.status === 204) return '';
 
@@ -108,7 +154,12 @@ function buildReportEndpoint(enterprise: string, day: string, kind: ReportKind):
 }
 
 async function downloadReportLink(url: string, day: string): Promise<string> {
-  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { Accept: 'application/json' } });
+  } catch (error) {
+    throw toBrowserLoadError(error, `Signed report download failed to load for ${day}`);
+  }
   if (!response.ok) {
     throw new Error(`Report download failed (${response.status}) from signed URL.`);
   }
@@ -146,4 +197,12 @@ function normalizeReportRow(row: unknown, day: string): string {
     }
   }
   return JSON.stringify(row);
+}
+
+function toBrowserLoadError(error: unknown, context: string): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof TypeError || message === 'Load failed' || message === 'Failed to fetch') {
+    return new Error(`${context}. The browser blocked or could not reach the report endpoint. If this keeps happening, run the gh CLI helper from README and upload the generated NDJSON files.`);
+  }
+  return error instanceof Error ? error : new Error(message);
 }

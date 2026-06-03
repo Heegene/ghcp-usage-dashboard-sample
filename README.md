@@ -48,6 +48,8 @@ GitHub Copilot User Metrics API에서 내보낸 **NDJSON** 파일 (한 줄 = 한
 - `user-teams-1-day`
 
 이 기능은 Enterprise Copilot Metrics API `apiVersion=2026-03-10`만 사용합니다. Token은 브라우저 메모리에서만 사용되며 저장하지 않습니다. Token은 GitHub API 호출에만 전송되고, signed report URL은 token 없이 다운로드합니다.
+로컬 개발 서버(`localhost`)에서는 브라우저의 signed URL 다운로드 제한을 피하기 위해 Vite dev server가 같은 API 버전으로 리포트를 대신 다운로드합니다. GitHub Pages 배포 환경은 정적 호스팅 그대로 유지됩니다.
+브라우저 또는 GitHub Pages 환경에서 `Load failed`가 계속 발생하면 아래 `gh` CLI helper로 리포트를 내려받은 뒤 파일 업로드 방식을 사용하세요.
 
 ### 3. `gh` CLI helper로 가져오기
 
@@ -174,6 +176,8 @@ Use the **Import from API** tab to enter an Enterprise slug, date range, and Git
 - `user-teams-1-day`
 
 This uses only the Enterprise Copilot Metrics API `apiVersion=2026-03-10`. The token is used only in browser memory and is not stored. It is sent only to GitHub API; signed report URLs are downloaded without the token.
+On the local dev server (`localhost`), the Vite dev server downloads reports with the same API version to avoid browser signed URL restrictions. GitHub Pages deployment remains static hosting.
+If the browser or GitHub Pages environment keeps showing `Load failed`, use the `gh` CLI helper below and then upload the generated files.
 
 ### 3. Import with the `gh` CLI helper
 

@@ -91,7 +91,7 @@ export function ApiImport({ onReportsLoaded }: ApiImportProps) {
 
           <div className="flex items-start gap-2 rounded-lg border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground">
             <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-accent" weight="fill" />
-            <span>{t('api_import.privacy')}</span>
+            <span>{t('api_import.privacy')} {t('api_import.fallback')}</span>
           </div>
 
           {progress && <p className="text-xs text-muted-foreground font-mono">{progress}</p>}

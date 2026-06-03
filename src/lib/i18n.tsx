@@ -81,6 +81,8 @@ const translations = {
   // Models
   'models.title': { ko: 'AI 모델 사용 분석', en: 'AI Model Usage' },
   'models.name': { ko: '모델', en: 'Model' },
+  'models.other_redacted': { ko: '기타/비공개', en: 'Other / redacted' },
+  'models.redacted_note': { ko: '모델명이 others로만 보이면 GitHub API가 해당 기간/범위의 모델명을 일반화해서 반환한 것입니다. 가능한 경우 feature별 모델 집계를 우선 사용하지만, API에 구체 모델명이 없으면 대시보드에서 복원할 수 없습니다.', en: 'If models only appear as others, the GitHub API returned generalized model names for the selected date range or scope. The dashboard prefers model-by-feature data when available, but it cannot recover specific model names that are not present in the API response.' },
 
   // ESSP
   'essp.title': { ko: 'ESSP 인사이트', en: 'ESSP Insights' },

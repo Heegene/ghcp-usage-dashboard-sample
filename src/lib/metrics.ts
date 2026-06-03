@@ -138,7 +138,10 @@ function buildUserSummaries(raw: UserDayRecord[], users: string[]): UserSummary[
         if (l.language !== 'others' && l.language !== 'unknown') langsSet.add(l.language);
       }
       for (const m of r.totals_by_language_model) {
-        if (m.model && m.model !== 'unknown') modelsSet.add(m.model);
+        if (isSpecificModelName(m.model)) modelsSet.add(m.model);
+      }
+      for (const m of r.totals_by_model_feature) {
+        if (isSpecificModelName(m.model)) modelsSet.add(m.model);
       }
     }
 
@@ -266,18 +269,40 @@ function buildIdeBreakdown(raw: UserDayRecord[]): IdeStat[] {
 }
 
 function buildModelBreakdown(raw: UserDayRecord[]): ModelStat[] {
-  const map = new Map<string, { users: Set<string>; codeGen: number; codeAcc: number; locAdded: number }>();
+  const fromModelFeature = aggregateModels(raw, 'model_feature');
+  const fromLanguageModel = aggregateModels(raw, 'language_model');
+
+  if (fromModelFeature.some(m => !m.isGeneric)) return sortModels(fromModelFeature);
+  if (fromLanguageModel.some(m => !m.isGeneric)) return sortModels(fromLanguageModel);
+  return sortModels(fromModelFeature.length > 0 ? fromModelFeature : fromLanguageModel);
+}
+
+function aggregateModels(raw: UserDayRecord[], source: 'model_feature' | 'language_model'): ModelStat[] {
+  const map = new Map<string, { users: Set<string>; codeGen: number; codeAcc: number; locAdded: number; isGeneric: boolean }>();
+
+  const addModel = (model: string, userLogin: string, codeGen: number, codeAcc: number, locAdded: number) => {
+    const normalized = normalizeModelName(model);
+    if (!normalized) return;
+    const existing = map.get(normalized.name) || { users: new Set<string>(), codeGen: 0, codeAcc: 0, locAdded: 0, isGeneric: normalized.isGeneric };
+    existing.users.add(userLogin);
+    existing.codeGen += codeGen;
+    existing.codeAcc += codeAcc;
+    existing.locAdded += locAdded;
+    map.set(normalized.name, existing);
+  };
+
   for (const r of raw) {
-    for (const m of r.totals_by_language_model) {
-      if (!m.model || m.model === 'unknown') continue;
-      const existing = map.get(m.model) || { users: new Set<string>(), codeGen: 0, codeAcc: 0, locAdded: 0 };
-      existing.users.add(r.user_login);
-      existing.codeGen += m.code_generation_activity_count;
-      existing.codeAcc += m.code_acceptance_activity_count;
-      existing.locAdded += m.loc_added_sum;
-      map.set(m.model, existing);
+    if (source === 'model_feature') {
+      for (const m of r.totals_by_model_feature) {
+        addModel(m.model, r.user_login, m.code_generation_activity_count, m.code_acceptance_activity_count, m.loc_added_sum);
+      }
+    } else {
+      for (const m of r.totals_by_language_model) {
+        addModel(m.model, r.user_login, m.code_generation_activity_count, m.code_acceptance_activity_count, m.loc_added_sum);
+      }
     }
   }
+
   return [...map.entries()]
     .map(([model, d]) => ({
       model,
@@ -285,8 +310,25 @@ function buildModelBreakdown(raw: UserDayRecord[]): ModelStat[] {
       totalCodeGenerations: d.codeGen,
       totalCodeAcceptances: d.codeAcc,
       totalLocAdded: d.locAdded,
-    }))
-    .sort((a, b) => b.totalCodeGenerations - a.totalCodeGenerations);
+      isGeneric: d.isGeneric,
+    }));
+}
+
+function sortModels(models: ModelStat[]): ModelStat[] {
+  return models.sort((a, b) => b.totalCodeGenerations - a.totalCodeGenerations);
+}
+
+function normalizeModelName(model: string | undefined): { name: string; isGeneric: boolean } | null {
+  const trimmed = model?.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  if (lower === 'unknown') return null;
+  if (lower === 'others' || lower === 'other') return { name: 'others', isGeneric: true };
+  return { name: trimmed, isGeneric: false };
+}
+
+function isSpecificModelName(model: string | undefined): model is string {
+  return normalizeModelName(model)?.isGeneric === false;
 }
 
 export function formatNumber(num: number): string {

@@ -181,6 +181,7 @@ export interface ModelStat {
   totalCodeGenerations: number;
   totalCodeAcceptances: number;
   totalLocAdded: number;
+  isGeneric: boolean;
 }
 
 export type PageId = 'overview' | 'users' | 'features' | 'languages' | 'models' | 'essp' | 'trend' | 'teams';
